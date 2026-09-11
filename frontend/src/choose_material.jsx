@@ -1,0 +1,544 @@
+import { useState, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { 
+  FileText, 
+  Upload, 
+  Clock, 
+  CheckCircle2, 
+  ArrowLeft, 
+  Sparkles, 
+  AlertCircle, 
+  ArrowRight,
+  Infinity as InfinityIcon,
+  Layers,
+  Presentation,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  BookOpen,
+  HelpCircle,
+  Lightbulb
+} from 'lucide-react';
+
+
+export default function ChooseMaterial() {
+  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+
+  // Actual files present in the assets folder with exact relative & absolute paths for backend access
+  const initialMaterials = [
+    {
+      id: 'asset-1',
+      name: 'Circular Linked List in C.pptx',
+      size: '552 KB',
+      format: 'PPTX Presentation',
+      source: 'Assets Folder',
+      relativePath: '../frontend/src/assets/Circular Linked List in C.pptx',
+      absolutePath: 'C:/Users/arina/Documents/AI_study_room/frontend/src/assets/Circular Linked List in C.pptx',
+    },
+    {
+      id: 'asset-2',
+      name: 'Doubly Linked List.pptx',
+      size: '683 KB',
+      format: 'PPTX Presentation',
+      source: 'Assets Folder',
+      relativePath: '../frontend/src/assets/Doubly Linked List.pptx',
+      absolutePath: 'C:/Users/arina/Documents/AI_study_room/frontend/src/assets/Doubly Linked List.pptx',
+    },
+    {
+      id: 'asset-3',
+      name: 'Singly Linked List.pptx',
+      size: '1.6 MB',
+      format: 'PPTX Presentation',
+      source: 'Assets Folder',
+      relativePath: '../frontend/src/assets/Singly Linked List.pptx',
+      absolutePath: 'C:/Users/arina/Documents/AI_study_room/frontend/src/assets/Singly Linked List.pptx',
+    },
+  ];
+
+  const [materials, setMaterials] = useState(initialMaterials);
+  const [selectedMaterialId, setSelectedMaterialId] = useState('asset-1');
+
+  // Time duration state
+  const [duration, setDuration] = useState(15);
+  const [isNoLimit, setIsNoLimit] = useState(false);
+
+  // Request & Submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [confirmedPath, setConfirmedPath] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // AI Analysis Results state
+  const [aiAnalysisResult, setAiAnalysisResult] = useState(null);
+  const [expandedAnswerId, setExpandedAnswerId] = useState(null);
+
+  // Handle file upload with base64 conversion & path computation
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formattedSize = file.size > 1024 * 1024 
+      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.round(file.size / 1024)} KB`;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64Data = reader.result;
+
+      const newMaterial = {
+        id: `uploaded-${Date.now()}`,
+        name: file.name,
+        size: formattedSize,
+        format: file.name.split('.').pop()?.toUpperCase() || 'Document',
+        source: 'Uploaded File',
+        fileObject: file,
+        base64Content: base64Data,
+        relativePath: `../frontend/src/assets/${file.name}`,
+        absolutePath: `C:/Users/arina/Documents/AI_study_room/frontend/src/assets/${file.name}`,
+      };
+
+      setMaterials((prev) => [newMaterial, ...prev]);
+      setSelectedMaterialId(newMaterial.id);
+      setErrorMessage('');
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const selectedMaterial = materials.find((m) => m.id === selectedMaterialId) || materials[0];
+
+  // Submit POST request to localhost:3000/material_analysis
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedMaterial) {
+      setErrorMessage('Please select a material first.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage('');
+    setStatusMessage('');
+    setConfirmedPath('');
+    setAiAnalysisResult(null);
+
+    const timePayload = isNoLimit ? 'No Limit' : `${duration} Mins`;
+
+    try {
+      const payload = {
+        fileName: selectedMaterial.name,
+        filePath: selectedMaterial.relativePath,
+        absolutePath: selectedMaterial.absolutePath,
+        time: timePayload,
+        size: selectedMaterial.size,
+        format: selectedMaterial.format,
+        source: selectedMaterial.source,
+        fileContent: selectedMaterial.base64Content || null,
+      };
+
+      // POST to localhost:3000/material_analysis
+      const response = await fetch('http://localhost:3000/material_analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('Gemini analysis received by frontend:', data);
+        setSubmitSuccess(true);
+        setStatusMessage(data.message || 'Material analyzed and 10 viva questions generated by Gemini AI!');
+        setConfirmedPath(data.filePath || selectedMaterial.absolutePath);
+        setAiAnalysisResult(data);
+
+        // Store active viva session in sessionStorage for voice_session.jsx
+        sessionStorage.setItem(
+          'active_viva_session',
+          JSON.stringify({
+            topic: data.topic || selectedMaterial.name,
+            summary: data.summary,
+            duration: timePayload,
+            questions: data.questions || [],
+            fileName: selectedMaterial.name,
+            totalQuestions: data.totalQuestions || 10,
+          })
+        );
+      } else {
+        throw new Error(data.error || `Server responded with status: ${response.status}`);
+      }
+    } catch (err) {
+      console.warn('Backend server error:', err);
+      setErrorMessage(`Gemini analysis request failed: ${err.message}. Please verify the backend is running and API_KEY is valid in backend/.env.`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleStartSession = () => {
+    navigate('/voice-session');
+  };
+
+
+  return (
+    <div className="space-y-6 md:space-y-8 pb-12 max-w-5xl mx-auto">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#393E46]/40 p-6 md:p-8 rounded-3xl border border-[#948979]/20 backdrop-blur-sm">
+        <div>
+          <Link
+            to="/viva-sessions"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-[#948979] hover:text-[#DFD0B8] mb-2 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to AI Viva Sessions</span>
+          </Link>
+          <h1 className="text-2xl md:text-4xl font-extrabold text-[#DFD0B8] tracking-tight font-['Outfit']">
+            Choose Study Material
+          </h1>
+          <p className="text-xs md:text-sm text-[#DFD0B8]/70 mt-1">
+            Select course material from your assets or upload a new presentation to guide your viva examination
+          </p>
+        </div>
+
+        {/* Selected material summary badge */}
+        <div className="hidden lg:flex items-center gap-3 bg-[#222831] px-4 py-2.5 rounded-2xl border border-[#948979]/30">
+          <Presentation className="w-5 h-5 text-[#DFD0B8]" />
+          <div>
+            <p className="text-[10px] text-[#948979] uppercase font-semibold">Active Material</p>
+            <p className="text-xs font-bold text-[#DFD0B8] truncate max-w-[180px]">
+              {selectedMaterial?.name}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Step 1: Select or Upload Material */}
+        <div className="bg-[#393E46] rounded-3xl p-6 md:p-8 border border-[#948979]/30 shadow-xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#948979]/20">
+            <div>
+              <h2 className="text-lg md:text-xl font-bold text-[#DFD0B8] flex items-center gap-2">
+                <Layers className="w-5 h-5 text-[#DFD0B8]" />
+                <span>1. Select Presentation / Material</span>
+              </h2>
+              <p className="text-xs text-[#948979] mt-0.5">
+                Choose from files available in the assets folder or upload your own file
+              </p>
+            </div>
+
+            {/* Upload File Button */}
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileUpload}
+                accept=".pptx,.ppt,.pdf,.docx,.txt"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#222831] text-[#DFD0B8] border border-[#948979]/40 hover:border-[#DFD0B8] text-xs font-semibold transition-all shadow-md group"
+              >
+                <Upload className="w-3.5 h-3.5 text-[#DFD0B8] group-hover:scale-110 transition-transform" />
+                <span>Upload New File</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Grid of Materials */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {materials.map((item) => {
+              const isSelected = selectedMaterialId === item.id;
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    setSelectedMaterialId(item.id);
+                    setSubmitSuccess(false);
+                  }}
+                  className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between select-none relative group ${
+                    isSelected
+                      ? 'bg-[#222831] border-[#DFD0B8] shadow-xl ring-2 ring-[#DFD0B8]/30'
+                      : 'bg-[#222831]/60 border-[#948979]/30 hover:border-[#948979]/70 hover:bg-[#222831]/90'
+                  }`}
+                >
+                  {/* Selected checkmark indicator */}
+                  {isSelected && (
+                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#DFD0B8] text-[#222831] flex items-center justify-center">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#393E46] border border-[#948979]/30 flex items-center justify-center text-[#DFD0B8]">
+                      {item.name.endsWith('.pptx') || item.name.endsWith('.ppt') ? (
+                        <Presentation className="w-5 h-5 text-[#DFD0B8]" />
+                      ) : (
+                        <FileText className="w-5 h-5 text-[#DFD0B8]" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-[#DFD0B8] line-clamp-2 leading-snug group-hover:text-white transition-colors">
+                        {item.name}
+                      </h3>
+                      <p className="text-[11px] text-[#948979] mt-1">
+                        {item.source}
+                      </p>
+                      <p className="text-[10px] font-mono text-[#DFD0B8]/70 mt-1 truncate bg-[#393E46]/60 px-2 py-0.5 rounded border border-[#948979]/20" title={item.absolutePath}>
+                        Path: {item.relativePath}
+                      </p>
+                    </div>
+                  </div>
+
+
+                  <div className="mt-4 pt-3 border-t border-[#948979]/20 flex items-center justify-between text-xs text-[#948979]">
+                    <span className="bg-[#393E46] px-2 py-0.5 rounded text-[10px] text-[#DFD0B8]">
+                      {item.format}
+                    </span>
+                    <span>{item.size}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Step 2: Time Duration Selection */}
+        <div className="bg-[#393E46] rounded-3xl p-6 md:p-8 border border-[#948979]/30 shadow-xl space-y-5">
+          <div className="pb-3 border-b border-[#948979]/20">
+            <h2 className="text-lg md:text-xl font-bold text-[#DFD0B8] flex items-center gap-2">
+              <Clock className="w-5 h-5 text-[#DFD0B8]" />
+              <span>2. Choose Viva Duration</span>
+            </h2>
+            <p className="text-xs text-[#948979] mt-0.5">
+              Select time limit or choose no limit for an open-ended technical examination
+            </p>
+          </div>
+
+          {/* Quick preset duration buttons */}
+          <div className="flex flex-wrap items-center gap-3">
+            {[10, 15, 20, 30, 45, 60].map((mins) => {
+              const isCurrent = !isNoLimit && duration === mins;
+              return (
+                <button
+                  key={mins}
+                  type="button"
+                  onClick={() => {
+                    setIsNoLimit(false);
+                    setDuration(mins);
+                    setSubmitSuccess(false);
+                  }}
+                  className={`px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold border transition-all ${
+                    isCurrent
+                      ? 'bg-[#DFD0B8] text-[#222831] border-[#DFD0B8] shadow-md'
+                      : 'bg-[#222831] text-[#DFD0B8] border-[#948979]/40 hover:border-[#DFD0B8]/60'
+                  }`}
+                >
+                  {mins} Mins
+                </button>
+              );
+            })}
+
+            {/* No Limit Option */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsNoLimit(true);
+                setSubmitSuccess(false);
+              }}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs md:text-sm font-bold border transition-all ${
+                isNoLimit
+                  ? 'bg-[#DFD0B8] text-[#222831] border-[#DFD0B8] shadow-md'
+                  : 'bg-[#222831] text-[#DFD0B8] border-[#948979]/40 hover:border-[#DFD0B8]/60'
+              }`}
+            >
+              <InfinityIcon className="w-4 h-4" />
+              <span>No Limit</span>
+            </button>
+
+          </div>
+
+          {/* Custom Duration Input */}
+          {!isNoLimit && (
+            <div className="flex items-center gap-3 pt-2">
+              <span className="text-xs text-[#948979] font-medium">Custom duration:</span>
+              <div className="flex items-center gap-2 bg-[#222831] px-3 py-1.5 rounded-xl border border-[#948979]/30">
+                <input
+                  type="number"
+                  min="1"
+                  max="180"
+                  value={duration}
+                  onChange={(e) => {
+                    setDuration(Math.max(1, parseInt(e.target.value) || 1));
+                    setSubmitSuccess(false);
+                  }}
+                  className="w-16 bg-transparent text-[#DFD0B8] font-bold text-sm focus:outline-none text-center"
+                />
+                <span className="text-xs text-[#948979]">Minutes</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Step 3: Action Buttons & Analysis Status */}
+        <div className="bg-[#393E46] rounded-3xl p-6 md:p-8 border border-[#948979]/30 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-[#DFD0B8]">Ready to Analyze Material</p>
+              <p className="text-xs text-[#948979]">
+                Target endpoint: <code className="text-[#DFD0B8] bg-[#222831] px-1.5 py-0.5 rounded">localhost:3000/material_analysis</code>
+              </p>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3 rounded-2xl bg-[#393E46] text-[#DFD0B8] border border-[#948979]/60 hover:border-[#DFD0B8] hover:bg-[#948979]/20 font-bold text-sm transition-all shadow-md disabled:opacity-50"
+            >
+              <Sparkles className={`w-4 h-4 ${isSubmitting ? 'animate-spin' : ''}`} />
+              <span>{isSubmitting ? 'Analyzing Material...' : 'Submit Material Analysis'}</span>
+            </button>
+          </div>
+
+          {/* Success Banner and 10 Viva Questions Preview */}
+          {submitSuccess && (
+            <div className="p-6 md:p-8 rounded-3xl bg-[#222831] border-2 border-emerald-500/40 space-y-6 animate-in fade-in zoom-in-95">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#948979]/20">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="text-base md:text-lg font-bold text-[#DFD0B8]">{statusMessage}</h3>
+                    <p className="text-xs text-[#948979] mt-0.5">
+                      Analyzed Material: <strong className="text-[#DFD0B8]">{selectedMaterial.name}</strong> • Duration: <strong className="text-[#DFD0B8]">{isNoLimit ? 'No Limit' : `${duration} Mins`}</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleStartSession}
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl bg-[#DFD0B8] text-[#222831] font-extrabold text-sm hover:bg-[#b3a898] transition-all shadow-lg shadow-[#DFD0B8]/10 hover:scale-[1.02]"
+                >
+                  <span>Start Session</span>
+                  <ArrowRight className="w-4 h-4 text-[#222831]" />
+                </button>
+              </div>
+
+              {/* AI Generated Topic & Summary */}
+              {aiAnalysisResult && (
+                <div className="space-y-4">
+                  <div className="bg-[#393E46]/60 p-5 rounded-2xl border border-[#948979]/30 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#DFD0B8]" />
+                      <span className="text-xs uppercase font-bold text-[#948979] tracking-wider">Gemini AI Analysis</span>
+                    </div>
+                    <h4 className="text-lg font-extrabold text-[#DFD0B8]">{aiAnalysisResult.topic}</h4>
+                    {aiAnalysisResult.summary && (
+                      <p className="text-xs md:text-sm text-[#DFD0B8]/80 leading-relaxed">{aiAnalysisResult.summary}</p>
+                    )}
+                  </div>
+
+                  {/* 10 Viva Questions List */}
+                  {aiAnalysisResult.questions && aiAnalysisResult.questions.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-[#DFD0B8] flex items-center gap-2">
+                          <BookOpen className="w-4 h-4 text-[#DFD0B8]" />
+                          <span>Generated Viva Questions ({aiAnalysisResult.questions.length})</span>
+                        </h4>
+                        <span className="text-[11px] text-[#948979]">Click question to view sample answer</span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {aiAnalysisResult.questions.map((q) => {
+                          const isExpanded = expandedAnswerId === q.id;
+                          const difficultyClass = 
+                            q.difficulty === 'Easy'
+                              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                              : q.difficulty === 'Medium'
+                              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                              : 'bg-rose-500/15 text-rose-400 border-rose-500/30';
+
+                          return (
+                            <div
+                              key={q.id}
+                              className="bg-[#393E46]/40 rounded-2xl border border-[#948979]/20 overflow-hidden transition-all hover:border-[#948979]/40"
+                            >
+                              <div
+                                onClick={() => setExpandedAnswerId(isExpanded ? null : q.id)}
+                                className="p-4 cursor-pointer flex items-start justify-between gap-3 select-none"
+                              >
+                                <div className="space-y-1.5 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-black text-[#DFD0B8] bg-[#222831] px-2 py-0.5 rounded-lg">
+                                      Q{q.id}
+                                    </span>
+                                    {q.difficulty && (
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${difficultyClass}`}>
+                                        {q.difficulty}
+                                      </span>
+                                    )}
+                                    {q.keyConcept && (
+                                      <span className="text-[10px] font-semibold text-[#948979] bg-[#222831]/60 px-2 py-0.5 rounded-md">
+                                        Concept: {q.keyConcept}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm font-semibold text-[#DFD0B8] pt-1">
+                                    {q.question}
+                                  </p>
+                                </div>
+
+                                <div className="text-[#948979] shrink-0 pt-1">
+                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </div>
+                              </div>
+
+                              {isExpanded && q.sampleAnswer && (
+                                <div className="px-4 pb-4 pt-2 border-t border-[#948979]/15 bg-[#222831]/50 space-y-1.5 text-xs text-[#DFD0B8]/90">
+                                  <div className="flex items-center gap-1.5 text-[#DFD0B8] font-bold text-[11px]">
+                                    <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                                    <span>Model Answer / Key Points:</span>
+                                  </div>
+                                  <p className="pl-5 leading-relaxed text-[#DFD0B8]/80">{q.sampleAnswer}</p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Start Live Viva Session button */}
+                  <div className="pt-4 border-t border-[#948979]/20 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleStartSession}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-[#DFD0B8] text-[#222831] font-extrabold text-sm hover:bg-[#b3a898] transition-all shadow-xl shadow-[#DFD0B8]/15 hover:scale-[1.02]"
+                    >
+                      <span>Start Live Viva Session</span>
+                      <ArrowRight className="w-4 h-4 text-[#222831]" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 flex items-center gap-3 text-xs text-rose-300">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}

@@ -24,13 +24,14 @@ export default function VivaSessions() {
 
         {/* Action Button */}
         <Link
-          to="/voice-session"
+          to="/choose_material"
           className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-[#DFD0B8] text-[#222831] font-bold text-sm hover:bg-[#b3a898] transition-colors shrink-0"
         >
           <Plus className="w-4 h-4 text-[#222831]" />
           <span>Start A New Session</span>
         </Link>
       </div>
+
 
 
       {/* Main Table */}

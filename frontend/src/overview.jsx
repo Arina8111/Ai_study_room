@@ -12,21 +12,21 @@ import {
 
 export default function Overview() {
   const vivaSessions = [
-    { id: 1, topic: 'Topic 1', duration: '10 Min', date: '11/9/26', score: 'Score' },
-    { id: 2, topic: 'Topic 2', duration: '15 Min', date: '10/9/26', score: '9.2' },
-    { id: 3, topic: 'Topic 3', duration: '12 Min', date: '08/9/26', score: '8.8' },
+    { id: 1, topic: 'Singly Linked List', duration: '10 Min', date: '11/9/26', score: '8.5' },
+    { id: 2, topic: 'Doubly Linked List', duration: '15 Min', date: '10/9/26', score: '9.2' },
+    { id: 3, topic: 'Circular Linked List', duration: '12 Min', date: '08/9/26', score: '8.8' },
   ];
 
   const recallSessions = [
-    { id: 1, topic: 'Topic Name 1', accuracy: '92%', duration: '15 Min' },
-    { id: 2, topic: 'Topic Name 2', accuracy: '85%', duration: '20 Min' },
-    { id: 3, topic: 'Topic Name 3', accuracy: '78%', duration: '10 Min' },
+    { id: 1, topic: 'Singly Linked List', accuracy: '92%', duration: '15 Min' },
+    { id: 2, topic: 'Circular Linked List', accuracy: '85%', duration: '20 Min' },
+    { id: 3, topic: 'Doubly Linked List', accuracy: '78%', duration: '10 Min' },
   ];
 
   const notesList = [
-    { id: 1, topic: 'Topic Name 1', duration: '8 Min Read', date: 'Yesterday' },
-    { id: 2, topic: 'Topic Name 2', duration: '12 Min Read', date: '3 Days Ago' },
-    { id: 3, topic: 'Topic Name 3', duration: '5 Min Read', date: 'Last Week' },
+    { id: 1, topic: 'Singly Linked List', duration: '8 Min Read', date: 'Yesterday' },
+    { id: 2, topic: 'Doubly Linked List', duration: '12 Min Read', date: '3 Days Ago' },
+    { id: 3, topic: 'Circular Linked List', duration: '5 Min Read', date: 'Last Week' },
   ];
 
   return (
@@ -45,12 +45,13 @@ export default function Overview() {
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-4">
           <Link
-            to="/voice-session"
+            to="/choose_material"
             className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#393E46] text-[#DFD0B8] border border-[#948979]/40 font-medium text-sm hover:border-[#DFD0B8]/60 transition-colors"
           >
             <Mic2 className="w-4 h-4 text-[#DFD0B8]" />
             <span>Start Viva Sessions +</span>
           </Link>
+
 
           <Link
             to="/recall-session"
@@ -124,12 +125,13 @@ export default function Overview() {
                 </h2>
               </div>
               <Link
-                to="/voice-session"
+                to="/choose_material"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#222831] text-[#DFD0B8] border border-[#948979]/40 text-xs font-semibold hover:border-[#DFD0B8]/60 transition-colors shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>New Session</span>
               </Link>
+
             </div>
 
 

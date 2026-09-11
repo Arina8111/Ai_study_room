@@ -10,25 +10,54 @@ import {
   PhoneOff, 
   User, 
   Bot,
-  CameraOff
+  CameraOff,
+  Sparkles,
+  ChevronRight,
+  ChevronLeft,
+  HelpCircle,
+  BookOpen
 } from 'lucide-react';
 
 export default function VoiceSession() {
-  const [seconds, setSeconds] = useState(582); // 09:42 countdown
+  const [activeSession] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('active_viva_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const totalQuestions = activeSession?.questions?.length || 0;
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+
+  // Initialize timer based on duration
+  const [seconds, setSeconds] = useState(() => {
+    if (activeSession?.duration) {
+      if (activeSession.duration === 'No Limit') return 0;
+      const parsed = parseInt(activeSession.duration);
+      if (!isNaN(parsed) && parsed > 0) return parsed * 60;
+    }
+    return 582; // default 09:42 countdown
+  });
+
+  const isCountUp = activeSession?.duration === 'No Limit';
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [cameraPermissionGranted, setCameraPermissionGranted] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Timer countdown
+  // Timer countdown / countup
   useEffect(() => {
-    if (seconds <= 0) return;
     const interval = setInterval(() => {
-      setSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+      setSeconds((prev) => {
+        if (isCountUp) return prev + 1;
+        return prev > 0 ? prev - 1 : 0;
+      });
     }, 1000);
     return () => clearInterval(interval);
-  }, [seconds]);
+  }, [isCountUp]);
 
   // Request & attach real webcam stream
   useEffect(() => {
@@ -103,23 +132,35 @@ export default function VoiceSession() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const transcriptMessages = [
-    { sender: 'AI', text: 'What is photosynthesis?', time: '09:55' },
-    { sender: 'Me', text: 'It is a process used by plants and other organisms to convert light energy into chemical energy...', time: '09:48' },
-    { sender: 'AI', text: 'Good. Where specifically do the light-dependent reactions take place inside the plant cell?', time: '09:44' },
-    { sender: 'Me', text: 'They take place in the thylakoid membranes of chloroplasts, where chlorophyll absorbs photons.', time: '09:42' },
-  ];
+  const currentQ = activeSession?.questions?.[currentQuestionIdx];
+
+  const transcriptMessages = currentQ
+    ? [
+        {
+          sender: 'AI',
+          text: currentQ.question,
+          time: 'Active Question',
+          concept: currentQ.keyConcept,
+          difficulty: currentQ.difficulty,
+        },
+      ]
+    : [
+        { sender: 'AI', text: 'What is photosynthesis?', time: '09:55' },
+        { sender: 'Me', text: 'It is a process used by plants and other organisms to convert light energy into chemical energy...', time: '09:48' },
+        { sender: 'AI', text: 'Good. Where specifically do the light-dependent reactions take place inside the plant cell?', time: '09:44' },
+        { sender: 'Me', text: 'They take place in the thylakoid membranes of chloroplasts, where chlorophyll absorbs photons.', time: '09:42' },
+      ];
 
   return (
     <div className="space-y-6 md:space-y-8 pb-10 max-w-6xl mx-auto">
       {/* Top Navigation & Center Title: AI VIVA ROOM */}
       <div className="relative flex flex-col items-center justify-center pt-2">
         <Link
-          to="/viva-sessions"
+          to="/choose_material"
           className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-2 text-xs md:text-sm text-[#948979] hover:text-[#DFD0B8] transition-colors bg-[#393E46]/40 px-3.5 py-2 rounded-xl border border-[#948979]/25"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Back to Vivas</span>
+          <span className="hidden sm:inline">Change Material</span>
         </Link>
 
         <h1 className="text-2xl md:text-4xl font-extrabold text-[#DFD0B8] tracking-tight font-['Outfit'] text-center uppercase">
@@ -127,18 +168,30 @@ export default function VoiceSession() {
         </h1>
       </div>
 
-      {/* Top Action Bar matching Wireframe: Left "timer" | Right "end session" */}
-      <div className="flex items-center justify-between gap-4 bg-[#393E46]/50 p-4 md:p-5 rounded-2xl border border-[#948979]/20 shadow-md">
+      {/* Top Action Bar: Timer | Active Topic | End Session */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#393E46]/50 p-4 md:p-5 rounded-2xl border border-[#948979]/20 shadow-md">
         {/* Left: Timer */}
         <div className="flex items-center gap-2.5 bg-[#222831] px-4 py-2.5 rounded-xl border border-[#948979]/30">
           <Clock className="w-4 h-4 text-[#DFD0B8] animate-pulse" />
           <div className="flex items-baseline gap-1.5">
-            <span className="text-xs text-[#948979] uppercase font-semibold">Timer</span>
+            <span className="text-xs text-[#948979] uppercase font-semibold">
+              {isCountUp ? 'Elapsed' : 'Timer'}
+            </span>
             <span className="font-mono text-lg md:text-xl font-bold text-[#DFD0B8]">
               {formatTime(seconds)}
             </span>
           </div>
         </div>
+
+        {/* Center: Active Material / Topic badge */}
+        {activeSession && (
+          <div className="flex items-center gap-2 text-center">
+            <Sparkles className="w-4 h-4 text-[#DFD0B8]" />
+            <span className="text-xs md:text-sm font-bold text-[#DFD0B8] truncate max-w-xs md:max-w-md">
+              {activeSession.topic || activeSession.fileName}
+            </span>
+          </div>
+        )}
 
         {/* Right: End Session Button */}
         <Link
@@ -149,6 +202,58 @@ export default function VoiceSession() {
           <span>End Session</span>
         </Link>
       </div>
+
+      {/* Question Stepper Bar if 10 Questions are loaded */}
+      {totalQuestions > 0 && (
+        <div className="bg-[#393E46] p-4 rounded-2xl border border-[#948979]/30 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-[#DFD0B8]" />
+            <span className="text-xs uppercase font-bold text-[#948979]">Viva Question:</span>
+            <span className="text-sm font-extrabold text-[#DFD0B8]">
+              {currentQuestionIdx + 1} of {totalQuestions}
+            </span>
+            {currentQ?.difficulty && (
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  currentQ.difficulty === 'Easy'
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : currentQ.difficulty === 'Medium'
+                    ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                    : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                }`}
+              >
+                {currentQ.difficulty}
+              </span>
+            )}
+            {currentQ?.keyConcept && (
+              <span className="hidden md:inline text-[11px] text-[#948979] bg-[#222831] px-2 py-0.5 rounded">
+                Concept: {currentQ.keyConcept}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={currentQuestionIdx === 0}
+              onClick={() => setCurrentQuestionIdx((prev) => Math.max(0, prev - 1))}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#222831] text-xs font-bold text-[#DFD0B8] border border-[#948979]/30 disabled:opacity-40 hover:border-[#DFD0B8] transition-all"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Prev</span>
+            </button>
+            <button
+              type="button"
+              disabled={currentQuestionIdx === totalQuestions - 1}
+              onClick={() => setCurrentQuestionIdx((prev) => Math.min(totalQuestions - 1, prev + 1))}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#DFD0B8] text-xs font-bold text-[#222831] disabled:opacity-40 hover:bg-[#b3a898] transition-all"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Two-Column Grid: Left User Video Input Frame | Right Live Transcript */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

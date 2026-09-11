@@ -8,8 +8,10 @@ import Notes from './notes';
 import Materials from './materials';
 import RecallSession from './recall_session';
 import VoiceSession from './voice_session';
+import ChooseMaterial from './choose_material';
 import { Menu, X, GraduationCap } from 'lucide-react';
 import './index.css';
+
 
 
 function App() {
@@ -66,7 +68,10 @@ function App() {
           <Route path="/materials" element={<Materials />} />
           <Route path="/recall-session" element={<RecallSession />} />
           <Route path="/voice-session" element={<VoiceSession />} />
+          <Route path="/choose_material" element={<ChooseMaterial />} />
+          <Route path="/choose-material" element={<Navigate to="/choose_material" replace />} />
           <Route path="*" element={<Navigate to="/overview" replace />} />
+
 
         </Routes>
       </main>
