@@ -170,6 +170,7 @@ Return your response STRICTLY as a valid JSON object with the following structur
     }
   ]
 }
+
 Ensure there are exactly 10 questions in the questions array, with varied difficulties (e.g. 3 Easy, 4 Medium, 3 Hard).
 `.trim();
 
@@ -233,4 +234,44 @@ Ensure there are exactly 10 questions in the questions array, with varied diffic
   }
 
   throw new Error(`Failed to generate viva questions with all attempted models. Last error: ${lastError?.message}`);
+}
+
+/** Evaluate one submitted viva answer. The question set remains server-side. */
+export async function evaluateVivaAnswer(question, transcript, apiKey) {
+  const prompt = `You are a fair university viva examiner. Evaluate the student's answer.
+Question: ${question.question}
+Key concept: ${question.keyConcept || "Not provided"}
+Expected answer: ${question.sampleAnswer || "Not provided"}
+Student transcript: ${transcript}
+
+Return strictly valid JSON only:
+{"score":0,"feedback":"brief helpful feedback","strengths":["..."],"improvements":["..."]}
+Score must be an integer from 0 to 10.`;
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Gemini answer evaluation failed (${response.status}): ${await response.text()}`);
+  }
+
+  const data = await response.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Gemini returned no evaluation content.");
+  const evaluation = JSON.parse(text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/, ""));
+  return {
+    score: Math.max(0, Math.min(10, Number(evaluation.score) || 0)),
+    feedback: evaluation.feedback || "Answer evaluated.",
+    strengths: Array.isArray(evaluation.strengths) ? evaluation.strengths : [],
+    improvements: Array.isArray(evaluation.improvements) ? evaluation.improvements : [],
+  };
 }

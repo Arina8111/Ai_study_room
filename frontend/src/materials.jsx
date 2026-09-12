@@ -47,7 +47,7 @@ export default function Materials() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#948979]/30 text-sm text-[#DFD0B8] font-medium">
-                <th className="py-3 px-4">1. Topic Name</th>
+                <th className="py-3 px-4">Topics</th>
                 <th className="py-3 px-4">No. of Pages</th>
                 <th className="py-3 px-4 text-right sm:text-left">Author</th>
               </tr>

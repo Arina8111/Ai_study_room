@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import { 
   Clock, 
   Mic, 
@@ -12,9 +13,6 @@ import {
   Bot,
   CameraOff,
   Sparkles,
-  ChevronRight,
-  ChevronLeft,
-  HelpCircle,
   BookOpen
 } from 'lucide-react';
 
@@ -28,8 +26,14 @@ export default function VoiceSession() {
     }
   });
 
-  const totalQuestions = activeSession?.questions?.length || 0;
-  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+  const [socketStatus, setSocketStatus] = useState('Connecting');
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [messages, setMessages] = useState([]);
+  const [answer, setAnswer] = useState('');
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [vivaError, setVivaError] = useState('');
+  const socketRef = useRef(null);
 
   // Initialize timer based on duration
   const [seconds, setSeconds] = useState(() => {
@@ -132,24 +136,51 @@ export default function VoiceSession() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const currentQ = activeSession?.questions?.[currentQuestionIdx];
+  useEffect(() => {
+    if (!activeSession?.sessionId) {
+      setVivaError('No saved viva session was found. Analyze a material before starting.');
+      return undefined;
+    }
 
-  const transcriptMessages = currentQ
-    ? [
-        {
-          sender: 'AI',
-          text: currentQ.question,
-          time: 'Active Question',
-          concept: currentQ.keyConcept,
-          difficulty: currentQ.difficulty,
-        },
-      ]
-    : [
-        { sender: 'AI', text: 'What is photosynthesis?', time: '09:55' },
-        { sender: 'Me', text: 'It is a process used by plants and other organisms to convert light energy into chemical energy...', time: '09:48' },
-        { sender: 'AI', text: 'Good. Where specifically do the light-dependent reactions take place inside the plant cell?', time: '09:44' },
-        { sender: 'Me', text: 'They take place in the thylakoid membranes of chloroplasts, where chlorophyll absorbs photons.', time: '09:42' },
-      ];
+    const socket = io('http://localhost:3000');
+    socketRef.current = socket;
+    socket.on('connect', () => {
+      setSocketStatus('Connected');
+      socket.emit('viva:start', { sessionId: activeSession.sessionId });
+    });
+    socket.on('viva:started', ({ question, totalQuestions: total }) => {
+      setTotalQuestions(total);
+      setCurrentQuestion(question);
+      setMessages([{ sender: 'AI', text: question.question, time: 'Question 1' }]);
+    });
+    socket.on('viva:evaluating', () => setIsEvaluating(true));
+    socket.on('viva:evaluation', ({ evaluation, nextQuestion, completed, totalQuestions: total }) => {
+      setIsEvaluating(false);
+      setTotalQuestions(total);
+      setMessages((previous) => [
+        ...previous,
+        { sender: 'AI', text: `Score: ${evaluation.score}/10. ${evaluation.feedback}`, time: 'Evaluation' },
+        ...(nextQuestion ? [{ sender: 'AI', text: nextQuestion.question, time: `Question ${nextQuestion.number}` }] : [{ sender: 'AI', text: 'Viva completed. Your responses have been saved.', time: 'Complete' }]),
+      ]);
+      setCurrentQuestion(nextQuestion);
+      if (completed) setSocketStatus('Completed');
+    });
+    socket.on('viva:error', ({ message }) => {
+      setIsEvaluating(false);
+      setVivaError(message);
+    });
+    socket.on('disconnect', () => setSocketStatus('Disconnected'));
+    return () => socket.disconnect();
+  }, [activeSession?.sessionId]);
+
+  const submitTranscript = (event) => {
+    event.preventDefault();
+    const transcript = answer.trim();
+    if (!transcript || !currentQuestion || isEvaluating) return;
+    setMessages((previous) => [...previous, { sender: 'Me', text: transcript, time: 'Your answer' }]);
+    setAnswer('');
+    socketRef.current?.emit('viva:transcript', { sessionId: activeSession.sessionId, transcript });
+  };
 
   return (
     <div className="space-y-6 md:space-y-8 pb-10 max-w-6xl mx-auto">
@@ -203,54 +234,33 @@ export default function VoiceSession() {
         </Link>
       </div>
 
-      {/* Question Stepper Bar if 10 Questions are loaded */}
-      {totalQuestions > 0 && (
+      {/* Question state is supplied one at a time over WebSocket. */}
+      {currentQuestion && (
         <div className="bg-[#393E46] p-4 rounded-2xl border border-[#948979]/30 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-[#DFD0B8]" />
             <span className="text-xs uppercase font-bold text-[#948979]">Viva Question:</span>
             <span className="text-sm font-extrabold text-[#DFD0B8]">
-              {currentQuestionIdx + 1} of {totalQuestions}
+              {currentQuestion.number} of {totalQuestions}
             </span>
-            {currentQ?.difficulty && (
+            {currentQuestion.difficulty && (
               <span
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  currentQ.difficulty === 'Easy'
+                  currentQuestion.difficulty === 'Easy'
                     ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                    : currentQ.difficulty === 'Medium'
+                    : currentQuestion.difficulty === 'Medium'
                     ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                     : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
                 }`}
               >
-                {currentQ.difficulty}
+                {currentQuestion.difficulty}
               </span>
             )}
-            {currentQ?.keyConcept && (
+            {currentQuestion.keyConcept && (
               <span className="hidden md:inline text-[11px] text-[#948979] bg-[#222831] px-2 py-0.5 rounded">
-                Concept: {currentQ.keyConcept}
+                Concept: {currentQuestion.keyConcept}
               </span>
             )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={currentQuestionIdx === 0}
-              onClick={() => setCurrentQuestionIdx((prev) => Math.max(0, prev - 1))}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#222831] text-xs font-bold text-[#DFD0B8] border border-[#948979]/30 disabled:opacity-40 hover:border-[#DFD0B8] transition-all"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span>Prev</span>
-            </button>
-            <button
-              type="button"
-              disabled={currentQuestionIdx === totalQuestions - 1}
-              onClick={() => setCurrentQuestionIdx((prev) => Math.min(totalQuestions - 1, prev + 1))}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#DFD0B8] text-xs font-bold text-[#222831] disabled:opacity-40 hover:bg-[#b3a898] transition-all"
-            >
-              <span>Next</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
       )}
@@ -376,7 +386,7 @@ export default function VoiceSession() {
 
             {/* Transcript Messages matching wireframe sketch */}
             <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
-              {transcriptMessages.map((msg, idx) => {
+              {messages.map((msg, idx) => {
                 const isAI = msg.sender === 'AI';
                 return (
                   <div
@@ -412,13 +422,16 @@ export default function VoiceSession() {
                 );
               })}
             </div>
+            {vivaError && <p className="mt-3 text-xs text-rose-400">{vivaError}</p>}
           </div>
 
-          {/* Transcript Footer Helper */}
-          <div className="pt-3 border-t border-[#948979]/20 flex items-center justify-between text-xs text-[#948979]">
-            <span>Continuous speech recognition active</span>
-            <span className="text-[#DFD0B8] font-medium">Session auto-transcribing</span>
-          </div>
+          <form onSubmit={submitTranscript} className="pt-3 border-t border-[#948979]/20 space-y-2">
+            <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} disabled={!currentQuestion || isEvaluating} rows="3" placeholder="Type the live transcript or your answer…" className="w-full resize-none rounded-xl bg-[#222831] border border-[#948979]/30 p-3 text-sm text-[#DFD0B8] outline-none focus:border-[#DFD0B8] disabled:opacity-50" />
+            <div className="flex items-center justify-between text-xs text-[#948979]">
+              <span>{isEvaluating ? 'Gemini is evaluating your answer…' : `WebSocket: ${socketStatus}`}</span>
+              <button type="submit" disabled={!answer.trim() || !currentQuestion || isEvaluating} className="rounded-lg bg-[#DFD0B8] px-3 py-2 font-bold text-[#222831] disabled:opacity-50">Submit answer</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

@@ -6,7 +6,6 @@ export default function VivaSessions() {
     { id: 1, topic: 'Topic Name 1', score: '9.4' },
     { id: 2, topic: 'Topic Name 2', score: '8.8' },
     { id: 3, topic: 'Topic Name 3', score: '9.1' },
-    { id: 4, topic: 'Topic Name 4', score: '8.5' },
   ];
 
   return (
@@ -40,7 +39,7 @@ export default function VivaSessions() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#948979]/30 text-sm text-[#DFD0B8] font-medium">
-                <th className="py-3 px-4">1. Topic Name</th>
+                <th className="py-3 px-4">Topics</th>
                 <th className="py-3 px-4">Score</th>
                 <th className="py-3 px-4 text-right">View Report</th>
               </tr>
