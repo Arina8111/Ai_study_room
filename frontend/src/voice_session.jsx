@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { 
@@ -30,10 +30,15 @@ export default function VoiceSession() {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [messages, setMessages] = useState([]);
-  const [answer, setAnswer] = useState('');
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [speechStatus, setSpeechStatus] = useState('Preparing microphone');
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [vivaError, setVivaError] = useState('');
   const socketRef = useRef(null);
+  const restartRecognitionRef = useRef(null);
+  const currentQuestionRef = useRef(null);
+  const isEvaluatingRef = useRef(false);
+  const isMutedRef = useRef(false);
 
   // Initialize timer based on duration
   const [seconds, setSeconds] = useState(() => {
@@ -51,6 +56,12 @@ export default function VoiceSession() {
   const [cameraPermissionGranted, setCameraPermissionGranted] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+
+  useEffect(() => {
+    currentQuestionRef.current = currentQuestion;
+    isEvaluatingRef.current = isEvaluating;
+    isMutedRef.current = isMuted;
+  }, [currentQuestion, isEvaluating, isMuted]);
 
   // Timer countdown / countup
   useEffect(() => {
@@ -173,14 +184,83 @@ export default function VoiceSession() {
     return () => socket.disconnect();
   }, [activeSession?.sessionId]);
 
-  const submitTranscript = (event) => {
-    event.preventDefault();
-    const transcript = answer.trim();
-    if (!transcript || !currentQuestion || isEvaluating) return;
+  const submitTranscript = useCallback((spokenText) => {
+    const transcript = spokenText.trim();
+    if (!transcript || !currentQuestionRef.current || isEvaluatingRef.current) return;
+    // Lock the recognizer immediately so one answer cannot be sent twice while
+    // the server is receiving it.
+    isEvaluatingRef.current = true;
+    setIsEvaluating(true);
     setMessages((previous) => [...previous, { sender: 'Me', text: transcript, time: 'Your answer' }]);
-    setAnswer('');
+    setLiveTranscript('');
     socketRef.current?.emit('viva:transcript', { sessionId: activeSession.sessionId, transcript });
-  };
+  }, [activeSession?.sessionId]);
+
+  // The Web Speech API turns the candidate's microphone input into text locally
+  // in supported browsers, then submits each completed spoken response.
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSpeechStatus('Speech recognition is not supported in this browser');
+      return undefined;
+    }
+
+    let disposed = false;
+    let recognition;
+
+    const startRecognition = () => {
+      if (disposed || !currentQuestionRef.current || isEvaluatingRef.current || isMutedRef.current) return;
+      try {
+        recognition.start();
+      } catch (error) {
+        // Calling start while the service is already listening throws InvalidStateError.
+        if (error.name !== 'InvalidStateError') setSpeechStatus('Unable to start speech recognition');
+      }
+    };
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = navigator.language || 'en-IN';
+    recognition.onstart = () => setSpeechStatus('Listening — speak your answer');
+    recognition.onresult = (event) => {
+      let finalText = '';
+      let interimText = '';
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const text = event.results[index][0].transcript;
+        if (event.results[index].isFinal) finalText += text;
+        else interimText += text;
+      }
+      setLiveTranscript((finalText + interimText).trim());
+      if (finalText.trim()) submitTranscript(finalText);
+    };
+    recognition.onerror = (event) => {
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        setSpeechStatus('Allow microphone permission to answer by voice');
+      } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        setSpeechStatus(`Speech recognition error: ${event.error}`);
+      }
+    };
+    recognition.onend = () => {
+      if (disposed) return;
+      if (isEvaluatingRef.current) {
+        setSpeechStatus('Answer sent for evaluation');
+        return;
+      }
+      if (!currentQuestionRef.current || isMutedRef.current) {
+        setSpeechStatus(isMutedRef.current ? 'Microphone muted' : 'Waiting for the next question');
+        return;
+      }
+      restartRecognitionRef.current = window.setTimeout(startRecognition, 350);
+    };
+    startRecognition();
+
+    return () => {
+      disposed = true;
+      window.clearTimeout(restartRecognitionRef.current);
+      recognition.abort();
+    };
+  }, [currentQuestion?.number, isEvaluating, isMuted, submitTranscript]);
 
   return (
     <div className="space-y-6 md:space-y-8 pb-10 max-w-6xl mx-auto">
@@ -421,17 +501,25 @@ export default function VoiceSession() {
                   </div>
                 );
               })}
+              {liveTranscript && !isEvaluating && (
+                <div className="p-4 rounded-2xl border border-dashed border-[#DFD0B8]/40 bg-[#222831]/35 text-[#DFD0B8]/90">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Mic className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                    <span className="text-xs font-bold">Listening…</span>
+                  </div>
+                  <p className="text-sm md:text-base leading-relaxed pl-6">{liveTranscript}</p>
+                </div>
+              )}
             </div>
             {vivaError && <p className="mt-3 text-xs text-rose-400">{vivaError}</p>}
           </div>
 
-          <form onSubmit={submitTranscript} className="pt-3 border-t border-[#948979]/20 space-y-2">
-            <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} disabled={!currentQuestion || isEvaluating} rows="3" placeholder="Type the live transcript or your answer…" className="w-full resize-none rounded-xl bg-[#222831] border border-[#948979]/30 p-3 text-sm text-[#DFD0B8] outline-none focus:border-[#DFD0B8] disabled:opacity-50" />
+          <div className="pt-3 border-t border-[#948979]/20">
             <div className="flex items-center justify-between text-xs text-[#948979]">
-              <span>{isEvaluating ? 'Gemini is evaluating your answer…' : `WebSocket: ${socketStatus}`}</span>
-              <button type="submit" disabled={!answer.trim() || !currentQuestion || isEvaluating} className="rounded-lg bg-[#DFD0B8] px-3 py-2 font-bold text-[#222831] disabled:opacity-50">Submit answer</button>
+              <span>{isEvaluating ? 'Gemini is evaluating your answer…' : speechStatus}</span>
+              <span>{`WebSocket: ${socketStatus}`}</span>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>
