@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import pg from "pg";
 import { Server } from "socket.io";
-import { uploadFileToGemini, generateVivaQuestions, evaluateVivaAnswer } from "./geminiService.js";
+import { uploadFileToGemini, generateVivaQuestions, generateRecallAnalysis, evaluateRecallResponse, evaluateVivaAnswer } from "./geminiService.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -30,6 +30,7 @@ if (!API_KEY) {
 
 let databaseReady = false;
 let tableInfo = null;
+const recallSessions = new Map();
 const quoteIdentifier = (identifier) => `"${identifier.replaceAll('"', '""')}"`;
 
 async function connectDatabase() {
@@ -260,6 +261,70 @@ app.post("/material_analysis", async (req, res) => {
       fileName,
       filePath: resolvedPath,
     });
+  }
+});
+
+app.post("/recall", async (req, res) => {
+  const { fileName, filePath, absolutePath, fileContent } = req.body;
+  console.log(`\n📥 Recall analysis request received for: ${fileName}`);
+
+  if (fileContent && fileName) {
+    try {
+      const base64Data = fileContent.includes(",") ? fileContent.split(",")[1] : fileContent;
+      const saveDir = path.resolve(__dirname, "../frontend/src/assets");
+      fs.mkdirSync(saveDir, { recursive: true });
+      fs.writeFileSync(path.join(saveDir, fileName), Buffer.from(base64Data, "base64"));
+    } catch (error) {
+      return res.status(400).json({ success: false, error: `Could not save uploaded file: ${error.message}` });
+    }
+  }
+
+  const candidatePaths = [
+    absolutePath,
+    filePath ? path.resolve(__dirname, filePath) : null,
+    fileName ? path.resolve(__dirname, "../frontend/src/assets", fileName) : null,
+    fileName ? path.resolve(process.cwd(), "frontend/src/assets", fileName) : null,
+  ].filter(Boolean);
+  const resolvedPath = candidatePaths.find((candidate) => fs.existsSync(candidate));
+  if (!resolvedPath) return res.status(404).json({ success: false, error: "File could not be located on disk", fileName });
+  if (!API_KEY) return res.status(500).json({ success: false, error: "API_KEY is missing from backend/.env.", fileName });
+
+  try {
+    const geminiFile = await uploadFileToGemini(resolvedPath, API_KEY, fileName);
+    const analysis = await generateRecallAnalysis(geminiFile, API_KEY);
+    const sessionId = `recall-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    recallSessions.set(sessionId, { ...analysis, fileName, createdAt: new Date().toISOString() });
+    return res.json({
+      success: true,
+      message: "Material analyzed for active recall. Your session is ready.",
+      ...analysis,
+      sessionId,
+      fileName,
+      filePath: resolvedPath,
+    });
+  } catch (error) {
+    console.error("❌ Recall analysis failed:", error);
+    return res.status(500).json({ success: false, error: `Gemini recall analysis failed: ${error.message}`, fileName });
+  }
+});
+
+app.post("/recall/evaluate", async (req, res) => {
+  const { sessionId, recallText } = req.body;
+  if (!sessionId || !recallText?.trim()) {
+    return res.status(400).json({ success: false, error: "A recall session and written response are required." });
+  }
+  if (!API_KEY) return res.status(500).json({ success: false, error: "API_KEY is missing from backend/.env." });
+
+  const analysis = recallSessions.get(sessionId);
+  if (!analysis) {
+    return res.status(404).json({ success: false, error: "Recall session was not found. Please choose the material again." });
+  }
+  try {
+    const report = await evaluateRecallResponse(analysis, recallText.trim(), API_KEY);
+    return res.json({ success: true, sessionId, ...report });
+  } catch (error) {
+    console.error("❌ Recall evaluation failed:", error);
+    return res.status(500).json({ success: false, error: `Gemini recall evaluation failed: ${error.message}` });
   }
 });
 

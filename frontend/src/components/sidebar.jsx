@@ -29,7 +29,7 @@ export default function Sidebar({ onCloseMobile }) {
             </div>
             <div>
               <h1 className="text-lg md:text-xl font-extrabold tracking-wide text-[#DFD0B8] font-['Outfit']">
-                AI Study Room
+                PrepMate
               </h1>
               <p className="text-[11px] text-[#948979] tracking-wider font-medium flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-[#DFD0B8]" />

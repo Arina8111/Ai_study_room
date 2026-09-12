@@ -275,3 +275,119 @@ Score must be an integer from 0 to 10.`;
     improvements: Array.isArray(evaluation.improvements) ? evaluation.improvements : [],
   };
 }
+
+/** Analyze study material for an active-recall session. */
+export async function generateRecallAnalysis(geminiFile, apiKey) {
+  const models = ['gemini-3.6-flash', 'gemini-2.5-pro', 'gemini-flash-latest'];
+  let lastError = null;
+  const promptText = `
+You are an expert study coach preparing material for an active-recall session.
+Carefully analyze the entire document or presentation named "${geminiFile.displayName}".
+Cover all important concepts, definitions, processes, examples, formulas, comparisons, and caveats found in the material. Do not omit major sections.
+
+Return STRICTLY valid JSON, with no markdown or text outside the JSON:
+{
+  "topic": "Title or main topic from the material",
+  "summary": "A concise overview of the whole material",
+  "bulletPoints": [
+    "Complete, self-contained study point 1",
+    "Complete, self-contained study point 2"
+  ]
+}
+
+Provide a comprehensive but focused set of bulletPoints for the entire material.
+`.trim();
+
+  for (const model of models) {
+    try {
+      console.log(`[Gemini AI] Requesting recall analysis using model: ${model}...`);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [
+              { file_data: { mime_type: geminiFile.mimeType, file_uri: geminiFile.uri } },
+              { text: promptText },
+            ] }],
+            generationConfig: { responseMimeType: 'application/json', temperature: 0.3 },
+          }),
+        }
+      );
+      if (!response.ok) throw new Error(`Model ${model} returned ${response.status}: ${await response.text()}`);
+
+      const rawText = (await response.json())?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) throw new Error('No content returned from Gemini model candidate');
+      const parsedData = JSON.parse(rawText.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, ''));
+      if (!Array.isArray(parsedData.bulletPoints) || parsedData.bulletPoints.length === 0) {
+        throw new Error('Gemini did not return recall bullet points.');
+      }
+      return {
+        topic: parsedData.topic || geminiFile.displayName.replace(/\.[^/.]+$/, ''),
+        summary: parsedData.summary || 'Study material successfully analyzed for active recall.',
+        bulletPoints: parsedData.bulletPoints.map(String),
+      };
+    } catch (err) {
+      console.warn(`[Gemini AI] Recall analysis failed with model ${model}:`, err.message);
+      lastError = err;
+    }
+  }
+  throw new Error(`Failed to generate recall analysis with all attempted models. Last error: ${lastError?.message}`);
+}
+
+/** Compare a student's active recall with the prepared material analysis. */
+export async function evaluateRecallResponse(analysis, recallText, apiKey) {
+  const prompt = `
+You are a precise and encouraging study coach. Compare the student's active-recall response against the reference analysis below.
+
+Reference topic: ${analysis.topic}
+Reference summary: ${analysis.summary}
+Reference study points:\n${analysis.bulletPoints.map((point, index) => `${index + 1}. ${point}`).join('\n')}
+
+Student's recalled response:\n${recallText}
+
+Judge factual coverage and correctness. Do not penalize wording differences when the meaning is accurate. Identify important missing concepts and factual inaccuracies only; do not invent errors.
+
+Return STRICTLY valid JSON, with no markdown or other text:
+{
+  "accuracyPercentage": 0,
+  "missingTopics": ["important missing topic"],
+  "incorrectPoints": ["brief correction of a factual inaccuracy"],
+  "strengths": ["accurately recalled concept"],
+  "feedback": "brief, specific encouragement",
+  "recommendation": "Try again and focus on the missing topics."
+}
+
+accuracyPercentage must be an integer from 0 to 100. For scores below 70, recommendation must encourage another attempt. For scores of 70 or above, recommendation must say the recall accuracy is good or very good.
+`.trim();
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+      }),
+    }
+  );
+  if (!response.ok) throw new Error(`Gemini recall evaluation failed (${response.status}): ${await response.text()}`);
+
+  const rawText = (await response.json())?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!rawText) throw new Error('Gemini returned no recall evaluation.');
+  const result = JSON.parse(rawText.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, ''));
+  const asList = (value) => Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+  const accuracyPercentage = Math.max(0, Math.min(100, Math.round(Number(result.accuracyPercentage) || 0)));
+  return {
+    accuracyPercentage,
+    missingTopics: asList(result.missingTopics),
+    incorrectPoints: asList(result.incorrectPoints),
+    strengths: asList(result.strengths),
+    feedback: result.feedback || 'Your recall has been evaluated.',
+    recommendation: result.recommendation || (accuracyPercentage < 70
+      ? 'It is okay to score lower at first—try again and focus on the missing topics.'
+      : 'Well done—your recall accuracy is good.'),
+  };
+}

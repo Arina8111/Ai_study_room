@@ -26,7 +26,7 @@ function App() {
             <GraduationCap className="w-4 h-4 text-[#DFD0B8]" />
           </div>
           <span className="font-extrabold text-base tracking-wide text-[#DFD0B8]">
-            AI Study Room
+            PrepMate
           </span>
         </div>
         <button
@@ -70,6 +70,7 @@ function App() {
           <Route path="/voice-session" element={<VoiceSession />} />
           <Route path="/choose_material" element={<ChooseMaterial />} />
           <Route path="/choose-material" element={<Navigate to="/choose_material" replace />} />
+          <Route path="/choose-file-recall" element={<ChooseMaterial mode="recall" />} />
           <Route path="*" element={<Navigate to="/overview" replace />} />
 
 

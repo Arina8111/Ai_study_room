@@ -71,7 +71,7 @@ export default function Overview() {
 
 
           <Link
-            to="/recall-session"
+            to="/choose-file-recall"
             className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#DFD0B8] text-[#222831] font-bold text-sm hover:bg-[#b3a898] transition-colors"
           >
             <Brain className="w-4 h-4 text-[#222831]" />
@@ -190,7 +190,7 @@ export default function Overview() {
             </div>
           </div>
           <Link
-            to="/recall-session"
+            to="/choose-file-recall"
             className="flex items-center gap-1.5 self-start sm:self-auto px-4 py-2 rounded-2xl bg-[#DFD0B8] text-[#222831] font-bold text-xs hover:bg-[#b3a898] transition-colors shrink-0"
           >
             <Plus className="w-3.5 h-3.5 text-[#222831]" />
