@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/sidebar';
 import Overview from './overview';
 import ActiveRecall from './active_recall';
@@ -11,6 +11,7 @@ import VoiceSession from './voice_session';
 import ChooseMaterial from './choose_material';
 import Report from './report';
 import ActiveRecallReport from './active_recall_report';
+import Home from './home';
 import { Menu, X, GraduationCap } from 'lucide-react';
 import './index.css';
 
@@ -18,6 +19,9 @@ import './index.css';
 
 function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  if (location.pathname === '/') return <Home />;
 
   return (
     <div className="min-h-screen bg-[#222831] text-[#DFD0B8] flex flex-col md:flex-row antialiased selection:bg-[#948979]/40 selection:text-[#DFD0B8]">
@@ -62,7 +66,7 @@ function App() {
       {/* Main Content Area: Routes */}
       <main className="flex-1 p-4 md:p-8 lg:p-10 max-w-7xl mx-auto w-full overflow-y-auto min-h-screen">
         <Routes>
-          <Route path="/" element={<Navigate to="/overview" replace />} />
+          <Route path="/" element={<Home />} />
           <Route path="/overview" element={<Overview />} />
           <Route path="/active-recall" element={<ActiveRecall />} />
           <Route path="/active-recall/:reportId" element={<ActiveRecallReport />} />

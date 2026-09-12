@@ -2,15 +2,23 @@
 
 @layer base {
   :root {
-    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    --font-heading: 'Outfit', system-ui, -apple-system, sans-serif;
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-heading: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --codex-base: #111111;
+    --codex-surface: #1b1b1b;
+    --codex-elevated: #242424;
+    --codex-border: #353535;
+    --codex-blue: #7c8cf8;
+    --codex-text: #f2f2f2;
+    --codex-muted: #a1a1aa;
   }
 
   body {
     font-family: var(--font-sans);
-    background-color: #222831;
-    color: #DFD0B8;
+    background-color: var(--codex-base);
+    color: var(--codex-text);
     overflow-x: hidden;
+    position: relative;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -18,22 +26,60 @@
   }
 }
 
-/* Custom scrollbar for dark theme */
+/* A subdued graphite backdrop inspired by the Codex interface. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.9;
+  background-color: #111111;
+  background-image:
+    radial-gradient(circle at 8% 4%, rgba(124, 140, 248, 0.10), transparent 28rem),
+    radial-gradient(circle at 90% 100%, rgba(124, 140, 248, 0.045), transparent 34rem);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Low-contrast graphite scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #222831;
+  background: #171717;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #393E46;
+  background: #4a4a4a;
   border-radius: 9999px;
-  border: 2px solid #222831;
+  border: 2px solid #171717;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #948979;
+  background: #7c8cf8;
 }
+
+/* Map the existing utility-based interface onto the Codex dark palette. */
+:is([class^="bg-[#222831]"], [class*=" bg-[#222831]"]) { background-color: #171717 !important; }
+:is([class^="bg-[#393E46]"], [class*=" bg-[#393E46]"]) { background-color: #242424 !important; }
+:is([class^="bg-[#DFD0B8]"], [class*=" bg-[#DFD0B8]"]) { background-color: #f2f2f2 !important; }
+:is([class^="hover:bg-[#948979]"], [class*=" hover:bg-[#948979]"]):hover,
+:is([class^="hover:bg-[#b3a898]"], [class*=" hover:bg-[#b3a898]"]):hover { background-color: #7c8cf8 !important; }
+
+:is([class^="text-[#222831]"], [class*=" text-[#222831]"], [class^="text-[#393E46]"], [class*=" text-[#393E46]"]) { color: #171717 !important; }
+:is([class^="text-[#948979]"], [class*=" text-[#948979]"]) { color: #a1a1aa !important; }
+:is([class^="text-[#DFD0B8]"], [class*=" text-[#DFD0B8]"], [class^="text-[#b3a898]"], [class*=" text-[#b3a898]"]) { color: #f2f2f2 !important; }
+
+:is([class^="border-[#222831]"], [class*=" border-[#222831]"], [class^="border-[#393E46]"], [class*=" border-[#393E46]"]) { border-color: #353535 !important; }
+:is([class^="border-[#948979]"], [class*=" border-[#948979]"]) { border-color: #555555 !important; }
+:is([class^="border-[#DFD0B8]"], [class*=" border-[#DFD0B8]"]) { border-color: #5b5b5b !important; }
+:is([class^="ring-[#DFD0B8]"], [class*=" ring-[#DFD0B8]"]) { --tw-ring-color: #7c8cf8 !important; }
+:is([class^="shadow-[#DFD0B8]"], [class*=" shadow-[#DFD0B8]"]) { --tw-shadow-color: #000 !important; }
+:is([class^="from-[#948979]"], [class*=" from-[#948979]"]) { --tw-gradient-from: #7c8cf8 !important; }
+:is([class^="to-[#DFD0B8]"], [class*=" to-[#DFD0B8]"]) { --tw-gradient-to: #c7d2fe !important; }
