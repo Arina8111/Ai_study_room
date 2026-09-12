@@ -67,7 +67,7 @@ export default function Materials() {
                   <td className="py-4 px-4 text-[#948979] text-right sm:text-left">
                     <span className="inline-flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5 text-[#948979]" />
-                      {m.author}
+                      Unknown
                     </span>
                   </td>
                 </tr>

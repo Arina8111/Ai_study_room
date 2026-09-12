@@ -9,6 +9,8 @@ import Materials from './materials';
 import RecallSession from './recall_session';
 import VoiceSession from './voice_session';
 import ChooseMaterial from './choose_material';
+import Report from './report';
+import ActiveRecallReport from './active_recall_report';
 import { Menu, X, GraduationCap } from 'lucide-react';
 import './index.css';
 
@@ -63,7 +65,9 @@ function App() {
           <Route path="/" element={<Navigate to="/overview" replace />} />
           <Route path="/overview" element={<Overview />} />
           <Route path="/active-recall" element={<ActiveRecall />} />
+          <Route path="/active-recall/:reportId" element={<ActiveRecallReport />} />
           <Route path="/viva-sessions" element={<VivaSessions />} />
+          <Route path="/viva-sessions/:reportId" element={<Report />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/materials" element={<Materials />} />
           <Route path="/recall-session" element={<RecallSession />} />

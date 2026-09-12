@@ -2,10 +2,10 @@ import { BookOpen, Plus, Clock } from 'lucide-react';
 
 export default function Notes() {
   const notes = [
-    { id: 1, topic: 'Linked List', accuracy: '90%', duration: '8 Min' },
-    { id: 2, topic: 'Singly Linked List', accuracy: '85%', duration: '12 Min' },
-    { id: 3, topic: 'Doubly Linked List', accuracy: '94%', duration: '6 Min' },
-    { id: 4, topic: 'Circular Linked List', accuracy: '88%', duration: '15 Min' },
+    { id: 1, topic: 'Linked List', duration: '8 Min' },
+    { id: 2, topic: 'Singly Linked List', duration: '12 Min' },
+    { id: 3, topic: 'Doubly Linked List', duration: '6 Min' },
+    { id: 4, topic: 'Circular Linked List', duration: '15 Min' },
   ];
 
   return (
@@ -31,32 +31,20 @@ export default function Notes() {
         </button>
       </div>
 
-      {/* Main Table */}
       <div className="bg-[#393E46] rounded-3xl p-6 md:p-8 border border-[#948979]/30 shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-[#948979]/30 text-sm text-[#DFD0B8] font-medium">
                 <th className="py-3 px-4">Topics</th>
-                <th className="py-3 px-4">Accuracy</th>
                 <th className="py-3 px-4 text-right sm:text-left">Duration</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#948979]/15 text-sm">
-              {notes.map((n, index) => (
-                <tr key={n.id} className="hover:bg-[#222831]/30 transition-colors">
-                  <td className="py-4 px-4 font-semibold text-[#DFD0B8]">
-                    {index + 1}. {n.topic}
-                  </td>
-                  <td className="py-4 px-4 text-[#DFD0B8]/90">
-                    {n.accuracy}
-                  </td>
-                  <td className="py-4 px-4 text-[#948979] text-right sm:text-left">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-[#948979]" />
-                      {n.duration}
-                    </span>
-                  </td>
+              {notes.map((note, index) => (
+                <tr key={note.id} className="hover:bg-[#222831]/30 transition-colors">
+                  <td className="py-4 px-4 font-semibold text-[#DFD0B8]">{index + 1}. {note.topic}</td>
+                  <td className="py-4 px-4 text-[#948979] text-right sm:text-left"><span className="inline-flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-[#948979]" />{note.duration}</span></td>
                 </tr>
               ))}
             </tbody>

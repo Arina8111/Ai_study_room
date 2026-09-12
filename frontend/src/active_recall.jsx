@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Brain, Plus, Clock } from 'lucide-react';
+import { Brain, Plus, FileText } from 'lucide-react';
 
 export default function ActiveRecall() {
   const sessions = [
-    { id: 1, topic: 'Linked List', accuracy: '58%', duration: '15 Min' },
-    { id: 2, topic: 'Singly Linked List', accuracy: '84%', duration: '20 Min' },
-    { id: 3, topic: 'Doubly Linked List', accuracy: '68%', duration: '10 Min' },
-    { id: 4, topic: 'Circular Linked List', accuracy: '94%', duration: '25 Min' },
+    { id: 'linked-list', topic: 'Linked List', accuracy: '58%' },
+    { id: 'singly-linked-list', topic: 'Singly Linked List', accuracy: '84%' },
+    { id: 'doubly-linked-list', topic: 'Doubly Linked List', accuracy: '68%' },
+    { id: 'circular-linked-list', topic: 'Circular Linked List', accuracy: '94%' },
   ];
 
   return (
@@ -41,7 +41,7 @@ export default function ActiveRecall() {
               <tr className="border-b border-[#948979]/30 text-sm text-[#DFD0B8] font-medium">
                 <th className="py-3 px-4">Topics</th>
                 <th className="py-3 px-4">Accuracy</th>
-                <th className="py-3 px-4 text-right sm:text-left">Duration</th>
+                <th className="py-3 px-4 text-right">View Report</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#948979]/15 text-sm">
@@ -53,11 +53,8 @@ export default function ActiveRecall() {
                   <td className="py-4 px-4 text-[#DFD0B8]/90">
                     {s.accuracy}
                   </td>
-                  <td className="py-4 px-4 text-[#948979] text-right sm:text-left">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-[#948979]" />
-                      {s.duration}
-                    </span>
+                  <td className="py-4 px-4 text-right">
+                    <Link to={`/active-recall/${s.id}`} className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#222831] text-[#DFD0B8] border border-[#948979]/40 text-xs font-semibold hover:border-[#DFD0B8]/60 transition-colors"><FileText className="w-3.5 h-3.5" />View Report</Link>
                   </td>
                 </tr>
               ))}

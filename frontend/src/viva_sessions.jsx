@@ -1,13 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Mic2, Plus, FileText } from 'lucide-react';
+import { vivaReportSummaries } from './report';
 
 export default function VivaSessions() {
-  const sessions = [
-    { id: 1, topic: 'Linked List', score: '7.3' },
-    { id: 2, topic: 'Singly Linked List', score: '6.1' },
-    { id: 3, topic: 'Doubly Linked List', score: '8.8' },
-    { id: 4, topic: 'Circular Linked List', score: '7.6' },
-  ];
+  const sessions = vivaReportSummaries;
 
   return (
     <div className="space-y-6 md:space-y-8 pb-10">
@@ -55,13 +51,13 @@ export default function VivaSessions() {
                     {s.score}
                   </td>
                   <td className="py-4 px-4 text-right">
-                    <button
-                      type="button"
+                    <Link
+                      to={`/viva-sessions/${s.id}`}
                       className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#222831] text-[#DFD0B8] border border-[#948979]/40 text-xs font-semibold hover:border-[#DFD0B8]/60 transition-colors"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       <span>View Report</span>
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               ))}
