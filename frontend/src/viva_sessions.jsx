@@ -3,9 +3,10 @@ import { Mic2, Plus, FileText } from 'lucide-react';
 
 export default function VivaSessions() {
   const sessions = [
-    { id: 1, topic: 'Topic Name 1', score: '9.4' },
-    { id: 2, topic: 'Topic Name 2', score: '8.8' },
-    { id: 3, topic: 'Topic Name 3', score: '9.1' },
+    { id: 1, topic: 'Linked List', score: '7.3' },
+    { id: 2, topic: 'Singly Linked List', score: '6.1' },
+    { id: 3, topic: 'Doubly Linked List', score: '8.8' },
+    { id: 4, topic: 'Circular Linked List', score: '7.6' },
   ];
 
   return (

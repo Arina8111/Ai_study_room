@@ -2,10 +2,10 @@ import { FolderKanban, Plus, School, Layers, User } from 'lucide-react';
 
 export default function Materials() {
   const materials = [
-    { id: 1, topic: 'Topic Name 1', pages: '42 Pages', author: 'Author 1' },
-    { id: 2, topic: 'Topic Name 2', pages: '180 Pages', author: 'Author 2' },
-    { id: 3, topic: 'Topic Name 3', pages: '312 Pages', author: 'Author 3' },
-    { id: 4, topic: 'Topic Name 4', pages: '64 Pages', author: 'Author 4' },
+    { id: 1, topic: 'Linked List', pages: '42 Pages', author: 'Author 1' },
+    { id: 2, topic: 'Singly Linked List', pages: '180 Pages', author: 'Author 2' },
+    { id: 3, topic: 'Doubly Linked List', pages: '312 Pages', author: 'Author 3' },
+    { id: 4, topic: 'Circular Linked List', pages: '64 Pages', author: 'Author 4' },
   ];
 
   return (

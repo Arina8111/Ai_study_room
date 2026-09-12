@@ -2,10 +2,10 @@ import { BookOpen, Plus, Clock } from 'lucide-react';
 
 export default function Notes() {
   const notes = [
-    { id: 1, topic: 'Topic Name 1', accuracy: '90%', duration: '8 Min' },
-    { id: 2, topic: 'Topic Name 2', accuracy: '85%', duration: '12 Min' },
-    { id: 3, topic: 'Topic Name 3', accuracy: '94%', duration: '6 Min' },
-    { id: 4, topic: 'Topic Name 4', accuracy: '88%', duration: '15 Min' },
+    { id: 1, topic: 'Linked List', accuracy: '90%', duration: '8 Min' },
+    { id: 2, topic: 'Singly Linked List', accuracy: '85%', duration: '12 Min' },
+    { id: 3, topic: 'Doubly Linked List', accuracy: '94%', duration: '6 Min' },
+    { id: 4, topic: 'Circular Linked List', accuracy: '88%', duration: '15 Min' },
   ];
 
   return (

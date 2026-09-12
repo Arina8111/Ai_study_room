@@ -12,15 +12,17 @@ import {
 
 export default function Overview() {
   const vivaSessions = [
-    { id: 1, topic: 'Singly Linked List', duration: '10 Min', date: '11/9/26', score: '8.5' },
-    { id: 2, topic: 'Doubly Linked List', duration: '15 Min', date: '10/9/26', score: '9.2' },
-    { id: 3, topic: 'Circular Linked List', duration: '12 Min', date: '08/9/26', score: '8.8' },
+    { id: 1, topic: 'Linked List', duration: '10 Min', date: '11/9/26', score: '7.3' },
+    { id: 2, topic: 'Singly Linked List', duration: '15 Min', date: '10/9/26', score: '6.1' },
+    { id: 3, topic: 'Doubly Linked List', duration: '12 Min', date: '08/9/26', score: '8.8' },
+    { id: 4, topic: 'Circular Linked List', duration: '18 Min', date: '07/9/26', score: '7.6' },
   ];
 
   const recallSessions = [
-    { id: 1, topic: 'Singly Linked List', accuracy: '92%', duration: '15 Min' },
-    { id: 2, topic: 'Circular Linked List', accuracy: '85%', duration: '20 Min' },
-    { id: 3, topic: 'Doubly Linked List', accuracy: '78%', duration: '10 Min' },
+    { id: 1, topic: 'Linked List', accuracy: '58%', duration: '15 Min' },
+    { id: 2, topic: 'Singly Linked List', accuracy: '84%', duration: '20 Min' },
+    { id: 3, topic: 'Doubly Linked List', accuracy: '68%', duration: '10 Min' },
+    { id: 4, topic: 'Circular Linked List', accuracy: '94%', duration: '25 Min' },
   ];
 
   const notesList = [
@@ -28,6 +30,21 @@ export default function Overview() {
     { id: 2, topic: 'Doubly Linked List', duration: '12 Min Read', date: '3 Days Ago' },
     { id: 3, topic: 'Circular Linked List', duration: '5 Min Read', date: 'Last Week' },
   ];
+
+  // Scores are placed on the same 0–100 scale as recall accuracy so both
+  // session types can be compared in one chart.
+  const performanceData = recallSessions.map((session, index) => ({
+    label: session.topic.replace(' Linked List', ''),
+    recallAccuracy: Number.parseInt(session.accuracy, 10),
+    vivaScore: Number(vivaSessions[index]?.score || 0) * 10,
+  }));
+  const chart = { width: 560, height: 220, left: 48, right: 20, top: 18, bottom: 42 };
+  const plotWidth = chart.width - chart.left - chart.right;
+  const plotHeight = chart.height - chart.top - chart.bottom;
+  const xFor = (index) => chart.left + (plotWidth * index) / Math.max(performanceData.length - 1, 1);
+  const chartMinimum = 40;
+  const yFor = (value) => chart.top + ((100 - value) / (100 - chartMinimum)) * plotHeight;
+  const pointsFor = (key) => performanceData.map((item, index) => `${xFor(index)},${yFor(item[key])}`).join(' ');
 
   return (
     <div className="space-y-6 md:space-y-8 pb-10">
@@ -78,39 +95,33 @@ export default function Overview() {
             <span className="text-xs text-[#948979]">Weekly Overview</span>
           </div>
 
-          {/* Graphical Representation matching Image 1 */}
-          <div className="relative bg-[#222831] rounded-2xl p-6 border border-[#948979]/20 overflow-hidden">
-            {/* Background grid */}
-            <div className="absolute inset-0 opacity-10 pointer-events-none grid grid-cols-6 grid-rows-4 divide-x divide-y divide-[#DFD0B8]">
-              {Array.from({ length: 24 }).map((_, i) => (
-                <div key={i} />
+          <div className="bg-[#222831] rounded-2xl p-4 md:p-5 border border-[#948979]/20 overflow-hidden">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-3 text-xs font-semibold">
+              <span className="flex items-center gap-2 text-[#DFD0B8]"><span className="w-7 h-0.5 bg-[#DFD0B8] rounded-full" />Active Recall accuracy</span>
+              <span className="flex items-center gap-2 text-cyan-300"><span className="w-7 border-t-2 border-dashed border-cyan-300" />AI Viva score (×10)</span>
+              <span className="text-[#948979]">Percentage</span>
+            </div>
+            <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="w-full h-52" role="img" aria-label="Active Recall accuracy and AI Viva score performance chart">
+              <title>Performance comparison by session</title>
+              <defs>
+                <linearGradient id="recall-area" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="#DFD0B8" stopOpacity="0.22" />
+                  <stop offset="100%" stopColor="#DFD0B8" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              {[40, 55, 70, 85, 100].map((tick) => (
+                <g key={tick}>
+                  <line x1={chart.left} x2={chart.width - chart.right} y1={yFor(tick)} y2={yFor(tick)} stroke="#948979" strokeOpacity="0.22" />
+                  <text x={chart.left - 10} y={yFor(tick) + 4} textAnchor="end" fill="#948979" fontSize="11">{tick}</text>
+                </g>
               ))}
-            </div>
-
-            {/* Custom SVG line + bar graph visual */}
-            <div className="relative z-10">
-              <svg viewBox="0 0 500 160" className="w-full h-40 overflow-visible">
-                {/* SVG Bars */}
-
-                {/* SVG Trend Line */}
-                <path
-                  d="M 30 110 Q 100 40, 180 80 T 320 50 T 440 30"
-                  fill="none"
-                  stroke="#DFD0B8"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-
-                {/* Nodes on trend line */}
-                <circle cx="30" cy="110" r="5" fill="#DFD0B8" />
-                <circle cx="120" cy="65" r="5" fill="#948979" />
-                <circle cx="180" cy="80" r="5" fill="#DFD0B8" />
-                <circle cx="260" cy="55" r="5" fill="#DFD0B8" />
-                <circle cx="330" cy="50" r="6" fill="#DFD0B8" stroke="#222831" strokeWidth="2" />
-                <circle cx="440" cy="30" r="6" fill="#DFD0B8" stroke="#222831" strokeWidth="2" />
-              </svg>
-
-            </div>
+              <path d={`M ${xFor(0)} ${chart.height - chart.bottom} L ${pointsFor('recallAccuracy').replaceAll(' ', ' L ')} L ${xFor(performanceData.length - 1)} ${chart.height - chart.bottom} Z`} fill="url(#recall-area)" />
+              <polyline points={pointsFor('recallAccuracy')} fill="none" stroke="#DFD0B8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              <polyline points={pointsFor('vivaScore')} fill="none" stroke="#67e8f9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="7 6" />
+              {performanceData.map((item, index) => (
+                <text key={item.label} x={xFor(index)} y={chart.height - 15} textAnchor="middle" fill="#948979" fontSize="11">{item.label}</text>
+              ))}
+            </svg>
           </div>
         </div>
 

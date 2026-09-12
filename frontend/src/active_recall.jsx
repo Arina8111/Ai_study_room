@@ -3,10 +3,10 @@ import { Brain, Plus, Clock } from 'lucide-react';
 
 export default function ActiveRecall() {
   const sessions = [
-    { id: 1, topic: 'Topic Name 1', accuracy: '92%', duration: '15 Min' },
-    { id: 2, topic: 'Topic Name 2', accuracy: '85%', duration: '20 Min' },
-    { id: 3, topic: 'Topic Name 3', accuracy: '78%', duration: '10 Min' },
-    { id: 4, topic: 'Topic Name 4', accuracy: '95%', duration: '25 Min' },
+    { id: 1, topic: 'Linked List', accuracy: '58%', duration: '15 Min' },
+    { id: 2, topic: 'Singly Linked List', accuracy: '84%', duration: '20 Min' },
+    { id: 3, topic: 'Doubly Linked List', accuracy: '68%', duration: '10 Min' },
+    { id: 4, topic: 'Circular Linked List', accuracy: '94%', duration: '25 Min' },
   ];
 
   return (
